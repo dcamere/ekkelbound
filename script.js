@@ -599,11 +599,37 @@ fondo.onload = () => {
     dibujarEscena();
 };
 const canvas = document.getElementById("canvas");
-canvas.width = window.innerWidth;
+canvas.width = window.innerWidth * 2; // Doble de ancho para el mapa
 canvas.height = window.innerHeight;
 const ctx = canvas.getContext("2d");
 // Elimina cualquier fondo CSS del canvas
 canvas.style.background = 'transparent';
+// Variable para guardar la última posición del cursor sobre el canvas
+let ultimaPosicionCursor = { x: null, y: null };
+
+// Detectar la posición del cursor sobre el canvas
+canvas.addEventListener('mousemove', function(e) {
+    // Obtener la posición relativa al canvas
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    ultimaPosicionCursor.x = x;
+    ultimaPosicionCursor.y = y;
+});
+
+// Teletransportar al jugador al presionar T
+document.addEventListener('keydown', function(e) {
+    if (e.key.toLowerCase() === 't' && ultimaPosicionCursor.x !== null) {
+        // Calcular la posición X en el mapa
+        const nuevaX = Math.max(0, Math.min(canvas.width, ultimaPosicionCursor.x));
+        // El jugador debe pisar el terreno
+        jugador.x = Math.floor(nuevaX / scaleX);
+        // Opcional: resetear ángulo y potencia si lo deseas
+        // jugador.angulo = 45;
+        // jugador.potencia = 50;
+        dibujarEscena();
+    }
+});
 const GRAVEDAD = 9.8;
 const FACTOR_POTENCIA = 1.2;
 const scaleX = 5;
@@ -613,7 +639,7 @@ const GROUND_Y = canvas.height - UI_OFFSET;
 
 let terreno = [];
 let terrenoPattern = null;
-const SEGMENTOS = Math.ceil(canvas.width / scaleX);
+const SEGMENTOS = Math.ceil(canvas.width / scaleX); // Ahora será mucho más grande
 let tipoBala = "1";
 
 function generarTerreno() {
@@ -839,8 +865,14 @@ function dibujarEscena() {
     if (enemigo.vida > 0 && spriteSheet.complete) {
         const ex = enemigo.x * scaleX;
         const ey = obtenerAltura(ex);
-        // Dibuja la imagen completa centrada en el enemigo
-        ctx.drawImage(spriteSheet, ex - 45, ey - 90, 90, 90);
+        ctx.save();
+        ctx.translate(ex, ey);
+        // El enemigo debe mirar hacia el jugador: flip si el jugador está a la derecha
+        if (jugador.x > enemigo.x) {
+            ctx.scale(-1, 1);
+        }
+        ctx.drawImage(spriteSheet, -45, -90, 90, 90);
+        ctx.restore();
         dibujarBarraVida(enemigo.x, enemigo.vida);
 
         // Indicador de ángulo del enemigo
@@ -1634,6 +1666,8 @@ function enemigoActua() {
         }, 40);
     }
     moverEnemigoFluido(mejorX, () => {
+        // El enemigo debe girar para dar la cara al jugador antes de disparar
+        enemigo.flip = (jugador.x < enemigo.x) ? true : false;
         // El enemigo ajusta su ángulo paso a paso para apuntar al jugador
         let pasos = 0;
         function ajustarAnguloInteligente() {
