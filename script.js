@@ -1,4 +1,9 @@
-window.turnosEnemigo = (window.turnosEnemigo || 0) + 1;
+    window.turnosEnemigo = (window.turnosEnemigo || 0) + 1;
+    // Posicionar el cursor en el primer campo al mostrar el modal
+    requestAnimationFrame(() => {
+        inputJugador.focus();
+        inputJugador.select();
+    });
 // --- Modal de nombres ---
 let nombreJugador = "Jugador";
 let juegoIniciado = false;
@@ -147,39 +152,41 @@ window.addEventListener('DOMContentLoaded', () => {
         modal.style.display = 'none';
         modal.style.padding = '0';
         modal.style.overflow = 'hidden';
-        // Calcular turnos y daño
-        window.turnosJugador = (window.turnosJugador || 0);
-        window.turnosEnemigo = (window.turnosEnemigo || 0);
-        window.dañoTotalJugador = (window.dañoTotalJugador || 0);
-        window.dañoTotalEnemigo = (window.dañoTotalEnemigo || 0);
-        // Redondear gasolina
-        let gasolinaJugador = Math.round(gasolina);
-        let gasolinaEnemigo = 100;
-        modal.innerHTML = `
+            // Calcular turnos y daño
+            window.turnosJugador = (window.turnosJugador || 0);
+            window.turnosEnemigo = (window.turnosEnemigo || 0);
+            window.dañoTotalJugador = (window.dañoTotalJugador || 0);
+            window.dañoTotalEnemigo = (window.dañoTotalEnemigo || 0);
+            // Redondear gasolina
+            let gasolinaJugador = Math.round(gasolina);
+            let gasolinaEnemigo = 100;
+            modal.innerHTML = `
                 <div style="display:flex;height:100%;width:100%;">
                     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(34,34,34,0.92);border-radius:48px 0 0 48px;padding:32px 18px 32px 32px;">
                         <h2 style='color:#ffe259;font-size:2em;margin-bottom:18px;text-shadow:0 0 24px #ffa751;'>${nombreJugador}</h2>
                         <div style='font-size:1.2em;color:#fff;margin-bottom:12px;'>HP: <span style='color:#ffe259'>${jugador.vida}</span></div>
-                        <div style='font-size:1.2em;color:#fff;margin-bottom:12px;'><span style='background:#ffe259;color:#222;padding:4px 16px;border-radius:12px;font-weight:bold;'>Kills: ${window.killsJugador || 0}</span></div>
+                        <div style='font-size:1.2em;color:#fff;margin-bottom:12px;'>Turnos jugados: <span style='color:#ffe259'>${window.turnosJugador}</span></div>
                         <div style='font-size:1.2em;color:#fff;margin-bottom:12px;'><span style='background:#ff5151;color:#fff;padding:4px 16px;border-radius:12px;font-weight:bold;'>Muertes: ${window.muertesJugador || 0}</span></div>
-                       </div>
+                        <div style='font-size:1.2em;color:#fff;margin-bottom:12px;'><span style='background:#ffe259;color:#222;padding:4px 16px;border-radius:12px;font-weight:bold;'>Kills: ${window.killsJugador || 0}</span></div>
+                    </div>
                     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,226,89,0.12);border-radius:0 48px 48px 0;padding:32px 32px 32px 18px;">
                         <h2 style='color:#222;font-size:2em;margin-bottom:18px;text-shadow:0 0 24px #ffe259;'>${nombreEnemigo}</h2>
                         <div style='font-size:1.2em;color:#222;margin-bottom:12px;'>HP: <span style='color:#ff5151'>${enemigo.vida}</span></div>
-                        <div style='font-size:1.2em;color:#222;margin-bottom:12px;'><span style='background:#ffe259;color:#222;padding:4px 16px;border-radius:12px;font-weight:bold;'>Kills: ${window.killsEnemigo || 0}</span></div>
+                        <div style='font-size:1.2em;color:#222;margin-bottom:12px;'>Turnos jugados: <span style='color:#ff5151'>${window.turnosEnemigo}</span></div>
                         <div style='font-size:1.2em;color:#222;margin-bottom:12px;'><span style='background:#ff5151;color:#fff;padding:4px 16px;border-radius:12px;font-weight:bold;'>Muertes: ${window.muertesEnemigo || 0}</span></div>
+                        <div style='font-size:1.2em;color:#222;margin-bottom:12px;'><span style='background:#ffe259;color:#222;padding:4px 16px;border-radius:12px;font-weight:bold;'>Kills: ${window.killsEnemigo || 0}</span></div>
                     </div>
                 </div>
             `;
     }
 
     function mostrarModalStats() {
-        // Elimina el modal anterior y crea uno nuevo para forzar actualización
-        let oldModal = document.getElementById('modalStats');
-        if (oldModal) oldModal.remove();
-        crearModalStats();
-        const modal = document.getElementById('modalStats');
-        modal.style.display = 'block';
+    // Elimina el modal anterior y crea uno nuevo para forzar actualización
+    let oldModal = document.getElementById('modalStats');
+    if (oldModal) oldModal.remove();
+    crearModalStats();
+    const modal = document.getElementById('modalStats');
+    modal.style.display = 'block';
     }
     function ocultarModalStats() {
         const modal = document.getElementById('modalStats');
@@ -970,12 +977,9 @@ function dispararPotencia(potencia) {
         // Colisión con el terreno
         const terrenoY = obtenerAltura(px);
         if (py > terrenoY) {
+            // Rompe el terreno en el punto de impacto
             romperTerreno(px, py, tipo === 'SS' ? 300 : tipo === '2' ? 120 : 100);
-            // Reproducir explosión
-            if (window.explosionAudio) {
-                window.explosionAudio.currentTime = 0;
-                window.explosionAudio.play();
-            }
+
             // Daño reducido si el impacto está cerca del enemigo
             const ex = enemigo.x * scaleX;
             const ey = obtenerAltura(ex);
@@ -1033,11 +1037,6 @@ function dispararPotencia(potencia) {
             if (tipo === '2') daño = 35;
             if (tipo === 'SS') daño = 60;
             const vidaRestante = enemigo.vida - daño;
-            // Reproducir explosión y mostrar impacto
-            if (window.explosionAudio) {
-                window.explosionAudio.currentTime = 0;
-                window.explosionAudio.play();
-            }
             mostrarImpactoCentral(vidaRestante <= 0);
             enemigo.vida = Math.max(0, vidaRestante);
             mostrarDaño(daño, ex, ey);
@@ -1052,7 +1051,7 @@ function dispararPotencia(potencia) {
                 turnoJugador = 2;
                 disparoRealizado = false;
                 enemigoActua();
-            }, 1500); // Espera a que se muestre el texto de impacto
+            }, 400);
             return;
         }
 
@@ -1418,12 +1417,8 @@ function dispararEnemigo(angulo, potencia) {
         // Colisión con el terreno
         const terrenoY = obtenerAltura(px2);
         if (py2 > terrenoY) {
+            // Rompe el terreno en el punto de impacto
             romperTerreno(px2, py2, 36);
-            // Reproducir explosión
-            if (window.explosionAudio) {
-                window.explosionAudio.currentTime = 0;
-                window.explosionAudio.play();
-            }
             dibujarEscena();
             turnoJugador = 1;
             iniciarTimerTurno();
@@ -1441,11 +1436,6 @@ function dispararEnemigo(angulo, potencia) {
         const bbox = { x: jx - 30, y: jy - 60, w: 60, h: 60 };
         if (px2 >= bbox.x && px2 <= bbox.x + bbox.w && py2 >= bbox.y && py2 <= bbox.y + bbox.h) {
             const vidaRestante = jugador.vida - 30;
-            // Reproducir explosión
-            if (window.explosionAudio) {
-                window.explosionAudio.currentTime = 0;
-                window.explosionAudio.play();
-            }
             mostrarImpactoCentral(vidaRestante <= 0);
             jugador.vida = Math.max(0, vidaRestante);
             mostrarDaño(30, jx, jy);
@@ -1460,17 +1450,62 @@ function dispararEnemigo(angulo, potencia) {
     animar();
 }
 
+iniciarTimerTurno();
+
+// --- UI: barra de gasolina y timer ---
 window.addEventListener('DOMContentLoaded', () => {
-    // ...existing code...
-    // --- Audio de explosión ---
-    let explosionAudio = document.getElementById('explosionAudio');
-    if (!explosionAudio) {
-        explosionAudio = document.createElement('audio');
-        explosionAudio.id = 'explosionAudio';
-        explosionAudio.src = 'explosion.mp3';
-        explosionAudio.preload = 'auto';
-        document.body.appendChild(explosionAudio);
+    const controls = document.querySelector('.controls');
+    if (controls && !document.getElementById('gasolinaBarContainer')) {
+        const gasolinaContainer = document.createElement('div');
+        gasolinaContainer.id = 'gasolinaBarContainer';
+        gasolinaContainer.style.width = '100%';
+        gasolinaContainer.style.height = '24px';
+        gasolinaContainer.style.background = '#222';
+        gasolinaContainer.style.borderRadius = '12px';
+        gasolinaContainer.style.margin = '8px 0';
+        gasolinaContainer.style.position = 'relative';
+        gasolinaContainer.style.boxShadow = '0 2px 8px #0006';
+
+        const gasolinaBar = document.createElement('div');
+        gasolinaBar.id = 'gasolinaBar';
+        gasolinaBar.style.height = '100%';
+        gasolinaBar.style.width = '100%';
+        gasolinaBar.style.background = 'linear-gradient(90deg, #ffe259 0%, #ffa751 100%)';
+        gasolinaBar.style.borderRadius = '12px';
+        gasolinaBar.style.transition = 'width 0.2s';
+        gasolinaBar.style.boxShadow = '0 0 8px #ffa751';
+
+        gasolinaContainer.appendChild(gasolinaBar);
+        controls.appendChild(gasolinaContainer);
     }
-    window.explosionAudio = explosionAudio;
-    // ...existing code...
+
+    // Timer grande arriba a la derecha, SIEMPRE con estilos y superposición
+    if (!document.getElementById('gasolinaTimer')) {
+        const timerDiv = document.createElement('div');
+        timerDiv.id = 'gasolinaTimer';
+        timerDiv.className = 'gasolina-timer-force';
+        document.body.appendChild(timerDiv);
+    }
+    // Estilos forzados para el timer de gasolina
+    const style = document.createElement('style');
+    style.innerHTML = `
+.gasolina-timer-force {
+    position: fixed !important;
+    top: 32px !important;
+    right: 48px !important;
+    z-index: 9999 !important;
+    font-size: 48px !important;
+    font-weight: 900 !important;
+    letter-spacing: 2px !important;
+    color: #ffe259 !important;
+    text-shadow: 0 0 24px #ffa751, 0 0 6px #000, 2px 2px 16px #000 !important;
+    padding: 12px 28px !important;
+    border-radius: 28px !important;
+    background: rgba(34,34,34,0.92) !important;
+    box-shadow: 0 8px 32px #000a, 0 0 24px #ffa751a0 !important;
+    display: none;
+    transition: transform 0.3s cubic-bezier(.68,-0.55,.27,1.55), opacity 0.3s;
+}
+`;
+    document.head.appendChild(style);
 });
