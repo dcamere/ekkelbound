@@ -16,5 +16,9 @@
   "bugs": {
     "url": "https://github.com/dcamere/ekkelbound/issues"
   },
-  "homepage": "https://github.com/dcamere/ekkelbound#readme"
+  "homepage": "https://github.com/dcamere/ekkelbound#readme",
+  "dependencies": {
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1"
+  }
 }
