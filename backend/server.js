@@ -6,7 +6,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-app.use(express.static('public')); // Carpeta donde estará tu juego frontend
+app.use(express.static('../public/')); // Carpeta donde estará tu juego frontend
 
 let rooms = {};
 
