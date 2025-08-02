@@ -1,3 +1,155 @@
+// --- Línea dorada brillante en powerBar para modo DIOS ---
+function mostrarLineaDiosPowerBar(potenciaIdeal) {
+    const container = document.getElementById("powerBarContainer");
+    const powerBar = document.getElementById("powerBar");
+    if (!container || !powerBar) return;
+    let diosMarker = document.getElementById("diosPowerMarker");
+    if (!diosMarker) {
+        diosMarker = document.createElement("div");
+        diosMarker.id = "diosPowerMarker";
+        diosMarker.style.position = "absolute";
+        diosMarker.style.top = "0";
+        diosMarker.style.bottom = "0";
+        diosMarker.style.width = "2px";
+        diosMarker.style.background = "linear-gradient(180deg,#ffe259,#ffa751)";
+        diosMarker.style.borderRadius = "1px";
+        diosMarker.style.pointerEvents = "none";
+        diosMarker.style.zIndex = "10002";
+        diosMarker.style.boxShadow = "0 0 12px #ffe259a0, 0 0 24px #ffa751a0";
+        container.appendChild(diosMarker);
+    }
+    const markerWidth = diosMarker.offsetWidth || 2;
+    const barWidth = container.clientWidth;
+    const offset = (potenciaIdeal / 100) * barWidth - (markerWidth / 2) - 10;
+    diosMarker.style.left = `${offset}px`;
+    // Animación de brillo pulsante
+    let frame = Date.now() % 1200;
+    let alpha = 0.7 + 0.3 * Math.sin(frame * 0.01);
+    diosMarker.style.opacity = alpha;
+}
+
+function ocultarLineaDiosPowerBar() {
+    const diosMarker = document.getElementById("diosPowerMarker");
+    if (diosMarker && diosMarker.parentElement) diosMarker.parentElement.removeChild(diosMarker);
+}
+// --- Línea de potencia ideal en powerbar para modo DIOS ---
+let animFramePowerBar = 0;
+function dibujarIndicadorPowerBar(potenciaIdeal) {
+    const bar = document.getElementById('powerBar');
+    const container = document.getElementById('powerBarContainer');
+    if (!bar || !container) return;
+    let overlay = document.getElementById('powerBarOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'powerBarOverlay';
+        overlay.style.position = 'absolute';
+        overlay.style.pointerEvents = 'none';
+        overlay.style.zIndex = '10001';
+        overlay.style.background = 'none';
+        container.appendChild(overlay);
+    }
+    // Posicionar overlay exactamente sobre el powerBar
+    overlay.style.left = bar.offsetLeft + 'px';
+    overlay.style.top = bar.offsetTop + 'px';
+    overlay.style.width = bar.offsetWidth + 'px';
+    overlay.style.height = bar.offsetHeight + 'px';
+    // Animación: destello pulsante
+    animFramePowerBar = (animFramePowerBar + 1) % 60;
+    const alpha = 0.5 + 0.5 * Math.sin(animFramePowerBar * 0.2);
+    const markerWidth = 6;
+    const barWidth = bar.offsetWidth;
+    const offset = (potenciaIdeal / 100) * barWidth - (markerWidth / 2);
+    overlay.innerHTML = `<div style="position:absolute;left:${offset}px;top:0;height:100%;width:${markerWidth}px;background:linear-gradient(180deg,#ff5151,#ffe259);border-radius:3px;box-shadow:0 0 12px #ffe259a0;opacity:${alpha};transition:none;"></div>`;
+    requestAnimationFrame(() => dibujarIndicadorPowerBar(potenciaIdeal));
+}
+    // --- Modo DIOS: calcular potencia ideal y dibujar indicador en powerbar ---
+    // Limpiar marcador dorado antes de recalcular
+    ocultarLineaDiosPowerBar();
+    if (modoDios && typeof enemigo !== 'undefined' && enemigo.vida > 0) {
+        // Buscar la potencia que hace que la trayectoria pase cerca del enemigo
+        let potenciaIdeal = 50;
+        let mejorDist = Infinity;
+        for (let p = 10; p <= 100; p += 1) {
+            const tray = simularTrayectoria(
+                jugador.angulo,
+                p,
+                typeof viento !== 'undefined' ? viento : 0,
+                jugador.x * scaleX,
+                obtenerAltura(jugador.x * scaleX)
+            );
+            for (let punto of tray) {
+                const dx = (punto.x * scaleX) - (enemigo.x * scaleX);
+                const dy = (canvas.height - punto.y * scaleY) - obtenerAltura(enemigo.x * scaleX);
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < mejorDist) {
+                    mejorDist = dist;
+                    potenciaIdeal = p;
+                }
+            }
+        }
+        mostrarLineaDiosPowerBar(potenciaIdeal);
+    }
+// --- Modo Dios ---
+var modoDios = false;
+function crearBotonModoDios() {
+    let btn = document.getElementById('btnModoDios');
+    if (!btn) {
+        btn = document.createElement('button');
+        btn.id = 'btnModoDios';
+        btn.textContent = 'Modo DIOS';
+        btn.style.position = 'fixed';
+        btn.style.right = '32px';
+        btn.style.bottom = '32px';
+        btn.style.zIndex = '10000';
+        btn.style.padding = '18px 32px';
+        btn.style.fontSize = '1.3em';
+        btn.style.background = 'linear-gradient(90deg,#ffe259,#ffa751)';
+        btn.style.color = '#222';
+        btn.style.border = 'none';
+        btn.style.borderRadius = '18px';
+        btn.style.boxShadow = '0 4px 16px #000a';
+        btn.style.cursor = 'pointer';
+        btn.style.fontWeight = 'bold';
+        btn.style.transition = 'background 0.3s';
+        document.body.appendChild(btn);
+    }
+    btn.onclick = () => {
+        modoDios = !modoDios;
+        btn.style.background = modoDios ? 'linear-gradient(90deg,#ff5151,#ffe259)' : 'linear-gradient(90deg,#ffe259,#ffa751)';
+        btn.textContent = modoDios ? 'Modo DIOS: ON' : 'Modo DIOS';
+        dibujarEscena();
+        // Forzar renderizado del marcador dorado en powerBar
+        if (modoDios) {
+            // Calcular potencia ideal y mostrar el marcador dorado
+            if (typeof enemigo !== 'undefined' && enemigo.vida > 0) {
+                let potenciaIdeal = 50;
+                let mejorDist = Infinity;
+                for (let p = 10; p <= 100; p += 1) {
+                    const tray = simularTrayectoria(
+                        jugador.angulo,
+                        p,
+                        typeof viento !== 'undefined' ? viento : 0,
+                        jugador.x * scaleX,
+                        obtenerAltura(jugador.x * scaleX)
+                    );
+                    for (let punto of tray) {
+                        const dx = (punto.x * scaleX) - (enemigo.x * scaleX);
+                        const dy = (canvas.height - punto.y * scaleY) - obtenerAltura(enemigo.x * scaleX);
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < mejorDist) {
+                            mejorDist = dist;
+                            potenciaIdeal = p;
+                        }
+                    }
+                }
+                mostrarLineaDiosPowerBar(potenciaIdeal);
+            }
+        } else {
+            ocultarLineaDiosPowerBar();
+        }
+    };
+}
+window.addEventListener('DOMContentLoaded', crearBotonModoDios);
     window.turnosEnemigo = (window.turnosEnemigo || 0) + 1;
     // Posicionar el cursor en el primer campo al mostrar el modal
     requestAnimationFrame(() => {
@@ -713,37 +865,39 @@ function dibujarEscena() {
             obtenerAltura(jugador.x * scaleX)
         );
         if (trayectoria.length > 1) {
-        // Indicador aún más corto: solo los primeros 4 puntos
-        const maxPuntos = 4;
+            let puntosMostrar = 4;
+            if (modoDios) {
+                puntosMostrar = trayectoria.length;
+            }
             ctx.save();
             ctx.beginPath();
             ctx.moveTo(px, py - 45);
-            for (let i = 0; i < Math.min(trayectoria.length, maxPuntos); i++) {
+            for (let i = 0; i < Math.min(trayectoria.length, puntosMostrar); i++) {
                 const punto = trayectoria[i];
                 ctx.lineTo(punto.x * scaleX, canvas.height - punto.y * scaleY);
             }
-            ctx.strokeStyle = '#00e6ff';
+            ctx.strokeStyle = modoDios ? '#ffe259' : '#00e6ff';
             ctx.lineWidth = 5;
-            ctx.shadowColor = '#00e6ff';
+            ctx.shadowColor = modoDios ? '#ffe259' : '#00e6ff';
             ctx.shadowBlur = 12;
             ctx.stroke();
             ctx.restore();
 
             // Círculo en la punta de la trayectoria
-            const ultimo = trayectoria[Math.min(trayectoria.length - 1, maxPuntos - 1)];
+            const ultimo = trayectoria[Math.min(trayectoria.length - 1, puntosMostrar - 1)];
             const cx = ultimo.x * scaleX;
             const cy = canvas.height - ultimo.y * scaleY;
             ctx.save();
             ctx.beginPath();
             ctx.arc(cx, cy, 10, 0, 2 * Math.PI);
-            ctx.fillStyle = '#00e6ff';
-            ctx.shadowColor = '#00e6ff';
+            ctx.fillStyle = modoDios ? '#ffe259' : '#00e6ff';
+            ctx.shadowColor = modoDios ? '#ffe259' : '#00e6ff';
             ctx.shadowBlur = 16;
             ctx.fill();
             ctx.restore();
 
             ctx.font = 'bold 18px sans-serif';
-            ctx.fillStyle = '#00e6ff';
+            ctx.fillStyle = modoDios ? '#ffe259' : '#00e6ff';
             ctx.shadowColor = '#000';
             ctx.shadowBlur = 8;
             ctx.fillText(`${jugador.angulo}°`, cx + 15, cy - 10);
@@ -1149,10 +1303,38 @@ function procesarTeclas() {
     }
     actualizarUI();
     dibujarEscena();
+    // Si modoDios está activo, recalcula y muestra la línea dorada en cada tick
+    if (modoDios && typeof enemigo !== 'undefined' && enemigo.vida > 0) {
+        let potenciaIdeal = 50;
+        let mejorDist = Infinity;
+        for (let p = 10; p <= 100; p += 1) {
+            const tray = simularTrayectoria(
+                jugador.angulo,
+                p,
+                typeof viento !== 'undefined' ? viento : 0,
+                jugador.x * scaleX,
+                obtenerAltura(jugador.x * scaleX)
+            );
+            for (let punto of tray) {
+                const dx = (punto.x * scaleX) - (enemigo.x * scaleX);
+                const dy = (canvas.height - punto.y * scaleY) - obtenerAltura(enemigo.x * scaleX);
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < mejorDist) {
+                    mejorDist = dist;
+                    potenciaIdeal = p;
+                }
+            }
+        }
+        mostrarLineaDiosPowerBar(potenciaIdeal);
+    }
 }
 
 document.addEventListener("keydown", (e) => {
     teclasPresionadas[e.key] = true;
+    // Si es una flecha, procesa y dibuja inmediatamente
+    if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key)) {
+        procesarTeclas();
+    }
     if (!movimientoInterval) {
         movimientoInterval = setInterval(procesarTeclas, 50);
     }
