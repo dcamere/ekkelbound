@@ -1,3 +1,33 @@
+// --- Botón para cambiar modo de carga del powerbar ---
+let modoCarga = 'slice'; // slice = barra espaciadora, drag = arrastrar mouse
+function crearBotonModoCarga() {
+    let btn = document.getElementById('btnModoCarga');
+    if (!btn) {
+        btn = document.createElement('button');
+        btn.id = 'btnModoCarga';
+        btn.textContent = 'SLICE';
+        btn.style.position = 'fixed';
+        btn.style.right = '220px';
+        btn.style.bottom = '32px';
+        btn.style.zIndex = '10000';
+        btn.style.padding = '18px 32px';
+        btn.style.fontSize = '1.3em';
+        btn.style.background = 'linear-gradient(90deg,#ffe259,#ffa751)';
+        btn.style.color = '#222';
+        btn.style.border = 'none';
+        btn.style.borderRadius = '18px';
+        btn.style.boxShadow = '0 4px 16px #000a';
+        btn.style.cursor = 'pointer';
+        btn.style.fontWeight = 'bold';
+        btn.style.transition = 'background 0.3s';
+        document.body.appendChild(btn);
+    }
+    btn.onclick = () => {
+        modoCarga = modoCarga === 'slice' ? 'drag' : 'slice';
+        btn.textContent = modoCarga === 'slice' ? 'SLICE' : 'DRAG';
+    };
+}
+window.addEventListener('DOMContentLoaded', crearBotonModoCarga);
 // --- Línea dorada brillante en powerBar para modo DIOS ---
 function mostrarLineaDiosPowerBar(potenciaIdeal) {
     const container = document.getElementById("powerBarContainer");
@@ -96,7 +126,7 @@ function crearBotonModoDios() {
     if (!btn) {
         btn = document.createElement('button');
         btn.id = 'btnModoDios';
-        btn.textContent = 'Modo DIOS';
+        btn.textContent = 'Aimbot OFF';
         btn.style.position = 'fixed';
         btn.style.right = '32px';
         btn.style.bottom = '32px';
@@ -116,7 +146,7 @@ function crearBotonModoDios() {
     btn.onclick = () => {
         modoDios = !modoDios;
         btn.style.background = modoDios ? 'linear-gradient(90deg,#ff5151,#ffe259)' : 'linear-gradient(90deg,#ffe259,#ffa751)';
-        btn.textContent = modoDios ? 'Modo DIOS: ON' : 'Modo DIOS';
+        btn.textContent = modoDios ? 'Aimbot ON' : 'Aimbot OFF';
         dibujarEscena();
         // Forzar renderizado del marcador dorado en powerBar
         if (modoDios) {
@@ -866,14 +896,44 @@ function dibujarEscena() {
         );
         if (trayectoria.length > 1) {
             let puntosMostrar = 4;
-            if (modoDios) {
-                puntosMostrar = trayectoria.length;
+            let trayectoriaFinal = trayectoria;
+            let cx, cy;
+            if (modoDios && typeof enemigo !== 'undefined' && enemigo.vida > 0) {
+                // Calcular potencia ideal para acertar al enemigo
+                let potenciaIdeal = 50;
+                let mejorDist = Infinity;
+                for (let p = 10; p <= 100; p += 1) {
+                    const tray = simularTrayectoria(
+                        jugador.angulo,
+                        p,
+                        typeof viento !== 'undefined' ? viento : 0,
+                        jugador.x * scaleX,
+                        obtenerAltura(jugador.x * scaleX)
+                    );
+                    for (let punto of tray) {
+                        const dx = (punto.x * scaleX) - (enemigo.x * scaleX);
+                        const dy = (canvas.height - punto.y * scaleY) - obtenerAltura(enemigo.x * scaleX);
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < mejorDist) {
+                            mejorDist = dist;
+                            potenciaIdeal = p;
+                        }
+                    }
+                }
+                trayectoriaFinal = simularTrayectoria(
+                    jugador.angulo,
+                    potenciaIdeal,
+                    typeof viento !== 'undefined' ? viento : 0,
+                    jugador.x * scaleX,
+                    obtenerAltura(jugador.x * scaleX)
+                );
+                puntosMostrar = trayectoriaFinal.length;
             }
             ctx.save();
             ctx.beginPath();
             ctx.moveTo(px, py - 45);
-            for (let i = 0; i < Math.min(trayectoria.length, puntosMostrar); i++) {
-                const punto = trayectoria[i];
+            for (let i = 0; i < Math.min(trayectoriaFinal.length, puntosMostrar); i++) {
+                const punto = trayectoriaFinal[i];
                 ctx.lineTo(punto.x * scaleX, canvas.height - punto.y * scaleY);
             }
             ctx.strokeStyle = modoDios ? '#ffe259' : '#00e6ff';
@@ -884,9 +944,9 @@ function dibujarEscena() {
             ctx.restore();
 
             // Círculo en la punta de la trayectoria
-            const ultimo = trayectoria[Math.min(trayectoria.length - 1, puntosMostrar - 1)];
-            const cx = ultimo.x * scaleX;
-            const cy = canvas.height - ultimo.y * scaleY;
+            const ultimo = trayectoriaFinal[Math.min(trayectoriaFinal.length - 1, puntosMostrar - 1)];
+            cx = ultimo.x * scaleX;
+            cy = canvas.height - ultimo.y * scaleY;
             ctx.save();
             ctx.beginPath();
             ctx.arc(cx, cy, 10, 0, 2 * Math.PI);
@@ -1338,7 +1398,8 @@ document.addEventListener("keydown", (e) => {
     if (!movimientoInterval) {
         movimientoInterval = setInterval(procesarTeclas, 50);
     }
-    if (e.key === " " && !cargando && !disparando && !disparoRealizado && turnoJugador === 1) {
+    // Solo activar carga con barra espaciadora si está en modo slice
+    if (e.key === " " && modoCarga === 'slice' && !cargando && !disparando && !disparoRealizado && turnoJugador === 1) {
         cargando = true;
         cargaPotencia = 0;
         const bar = document.getElementById("powerBar");
@@ -1347,6 +1408,34 @@ document.addEventListener("keydown", (e) => {
             bar.style.width = cargaPotencia + "%";
         }, 20);
     }
+// --- Modo Drag para powerbar ---
+document.addEventListener("mousedown", (e) => {
+    if (modoCarga !== 'drag' || disparando || disparoRealizado || turnoJugador !== 1) return;
+    const bar = document.getElementById("powerBar");
+    const container = document.getElementById("powerBarContainer");
+    if (!container || !bar) return;
+    if (e.button !== 0) return; // Solo click izquierdo
+    cargando = true;
+    cargaPotencia = 0;
+    bar.style.width = "0%";
+    function onMouseMove(ev) {
+        const rect = container.getBoundingClientRect();
+        let x = Math.max(0, Math.min(ev.clientX - rect.left, rect.width));
+        cargaPotencia = Math.round((x / rect.width) * 100);
+        bar.style.width = cargaPotencia + "%";
+    }
+    function onMouseUp(ev) {
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+        cargando = false;
+        jugador.potencia = cargaPotencia;
+        bar.style.width = "0%";
+        disparoRealizado = true;
+        dispararPotencia(jugador.potencia);
+    }
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+});
 });
 
 document.addEventListener("keyup", (e) => {
