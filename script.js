@@ -1,3 +1,50 @@
+// --- Modal de controles ---
+function crearModalControles() {
+    if (document.getElementById('modalControles')) return;
+    const modal = document.createElement('div');
+    modal.id = 'modalControles';
+    modal.innerHTML = `
+        <div class="modal-controles-content">
+            <button class="close-btn" title="Cerrar">&times;</button>
+            <h2>Controles y Hotkeys</h2>
+            <ul>
+                <li><span class="hotkey">⬅️ ➡️</span> Mover al personaje</li>
+                <li><span class="hotkey">⬆️ ⬇️</span> Cambiar ángulo de disparo</li>
+                <li><span class="hotkey">Barra espaciadora</span> Mantén presionado para cargar potencia y disparar (modo SLICE)</li>
+                <li><span class="hotkey">Mouse</span> Arrastra sobre la barra para disparar (modo DRAG)</li>
+                <li><span class="hotkey">1, 2, 3</span> Seleccionar tipo de bala</li>
+                <li><span class="hotkey">M</span> Activar/desactivar música</li>
+                <li><span class="hotkey">T</span> Teletransportar al jugador a la posición del cursor</li>
+                <li><span class="hotkey">Tab</span> Mostrar estadísticas de la partida</li>
+                <li><span class="hotkey">Aimbot</span> Activa el modo DIOS con el botón correspondiente</li>
+            </ul>
+            <div style="margin-top:12px;color:#ffe259;font-size:0.95em;">Ángulo actual: <span id="angleDisplayModal">45</span>°</div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    // Actualizar ángulo en el modal
+    const angleDisplayModal = modal.querySelector('#angleDisplayModal');
+    if (angleDisplayModal && typeof jugador !== 'undefined') {
+        angleDisplayModal.textContent = jugador.angulo;
+    }
+    // Cerrar modal
+    modal.querySelector('.close-btn').onclick = () => {
+        modal.remove();
+    };
+    // Cerrar con Escape
+    modal.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') modal.remove();
+    });
+    // Focus para permitir cerrar con Escape
+    setTimeout(() => { modal.focus(); }, 100);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    const btnControles = document.getElementById('btnControles');
+    if (btnControles) {
+        btnControles.onclick = crearModalControles;
+    }
+});
 // --- Botón para cambiar modo de carga del powerbar ---
 let modoCarga = 'slice'; // slice = barra espaciadora, drag = arrastrar mouse
 function crearBotonModoCarga() {
@@ -181,10 +228,13 @@ function crearBotonModoDios() {
 }
 window.addEventListener('DOMContentLoaded', crearBotonModoDios);
     window.turnosEnemigo = (window.turnosEnemigo || 0) + 1;
-    // Posicionar el cursor en el primer campo al mostrar el modal
+    // Posicionar el cursor en el primer campo al mostrar el modal solo si existe
     requestAnimationFrame(() => {
-        inputJugador.focus();
-        inputJugador.select();
+        const inputJugador = document.getElementById('inputNombreJugador');
+        if (inputJugador) {
+            inputJugador.focus();
+            inputJugador.select();
+        }
     });
 // --- Modal de nombres ---
 let nombreJugador = "Jugador";
@@ -1365,7 +1415,11 @@ function dispararPotencia(potencia) {
 
 
 function actualizarUI() {
-    document.getElementById("angleDisplay").textContent = jugador.angulo;
+    // Mostrar ángulo solo en el modal de controles si está abierto
+    const angleDisplayModal = document.getElementById("angleDisplayModal");
+    if (angleDisplayModal) {
+        angleDisplayModal.textContent = jugador.angulo;
+    }
     // Actualiza la barra de gasolina
     const gasolinaBar = document.getElementById("gasolinaBar");
     if (gasolinaBar) {
@@ -1474,6 +1528,15 @@ document.addEventListener("keydown", (e) => {
     }
 // --- Modo Drag para powerbar ---
 document.addEventListener("mousedown", (e) => {
+    // Si el modo drag está activado, pero el click es sobre un botón, no ejecutar drag
+    if (modoCarga === 'drag') {
+        // Verifica si el target es un botón o está dentro de un botón
+        let el = e.target;
+        while (el) {
+            if (el.tagName === 'BUTTON') return;
+            el = el.parentElement;
+        }
+    }
     if (modoCarga !== 'drag' || disparando || disparoRealizado || turnoJugador !== 1) return;
     const bar = document.getElementById("powerBar");
     const container = document.getElementById("powerBarContainer");
