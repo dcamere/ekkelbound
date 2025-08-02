@@ -932,9 +932,26 @@ function dibujarEscena() {
             ctx.save();
             ctx.beginPath();
             ctx.moveTo(px, py - 45);
+            let finEncontrado = false;
+            let finX = null, finY = null;
             for (let i = 0; i < Math.min(trayectoriaFinal.length, puntosMostrar); i++) {
                 const punto = trayectoriaFinal[i];
-                ctx.lineTo(punto.x * scaleX, canvas.height - punto.y * scaleY);
+                const x = punto.x * scaleX;
+                const y = canvas.height - punto.y * scaleY;
+                // Si estamos en modo dios, buscamos el primer punto donde la trayectoria "toca" el terreno cerca del enemigo
+                if (modoDios && !finEncontrado) {
+                    const terrenoY = obtenerAltura(x);
+                    const enemigoX = enemigo.x * scaleX;
+                    // Si está cerca del enemigo y toca el terreno
+                    if (Math.abs(x - enemigoX) < 15 && y >= terrenoY) {
+                        finEncontrado = true;
+                        finX = x;
+                        finY = terrenoY;
+                        ctx.lineTo(x, terrenoY);
+                        break; // Detener el dibujo aquí
+                    }
+                }
+                ctx.lineTo(x, y);
             }
             ctx.strokeStyle = modoDios ? '#ffe259' : '#00e6ff';
             ctx.lineWidth = 5;
@@ -943,10 +960,10 @@ function dibujarEscena() {
             ctx.stroke();
             ctx.restore();
 
-            // Círculo en la punta de la trayectoria
-            const ultimo = trayectoriaFinal[Math.min(trayectoriaFinal.length - 1, puntosMostrar - 1)];
-            cx = ultimo.x * scaleX;
-            cy = canvas.height - ultimo.y * scaleY;
+            // Círculo e indicador de ángulo al inicio de la trayectoria (modo dios)
+            const primero = trayectoriaFinal[0];
+            cx = primero.x * scaleX;
+            cy = canvas.height - primero.y * scaleY;
             ctx.save();
             ctx.beginPath();
             ctx.arc(cx, cy, 10, 0, 2 * Math.PI);
@@ -955,6 +972,18 @@ function dibujarEscena() {
             ctx.shadowBlur = 16;
             ctx.fill();
             ctx.restore();
+
+            // Círculo dorado en el punto final sobre el terreno cerca del enemigo
+            if (modoDios && finEncontrado) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(finX, finY, 10, 0, 2 * Math.PI);
+                ctx.fillStyle = '#ffe259';
+                ctx.shadowColor = '#ffe259';
+                ctx.shadowBlur = 16;
+                ctx.fill();
+                ctx.restore();
+            }
 
             ctx.font = 'bold 18px sans-serif';
             ctx.fillStyle = modoDios ? '#ffe259' : '#00e6ff';
@@ -1148,7 +1177,10 @@ function mostrarDaño(valor, x, y) {
         window.muertesEnemigo = (window.muertesEnemigo || 0) + 1;
         window.killsJugador = (window.killsJugador || 0) + 1;
         setTimeout(() => {
-            enemigo.x = Math.floor(Math.random() * 100) + 120;
+            // Respawnea lejos del jugador (mínimo 100px de distancia)
+            do {
+                enemigo.x = Math.floor(Math.random() * 100) + 120;
+            } while (Math.abs(enemigo.x - jugador.x) < 100);
             enemigo.vida = 100;
             animarCaida(enemigo, () => {
                 dibujarEscena();
@@ -1508,11 +1540,59 @@ function iniciarTimerTurno() {
                 setTimeout(() => {
                     enemigoActua();
                 }, 800);
+                // Recalcular indicador dorado en powerbar si modoDios está activo
+                if (modoDios && typeof enemigo !== 'undefined' && enemigo.vida > 0) {
+                    let potenciaIdeal = 50;
+                    let mejorDist = Infinity;
+                    for (let p = 10; p <= 100; p += 1) {
+                        const tray = simularTrayectoria(
+                            jugador.angulo,
+                            p,
+                            typeof viento !== 'undefined' ? viento : 0,
+                            jugador.x * scaleX,
+                            obtenerAltura(jugador.x * scaleX)
+                        );
+                        for (let punto of tray) {
+                            const dx = (punto.x * scaleX) - (enemigo.x * scaleX);
+                            const dy = (canvas.height - punto.y * scaleY) - obtenerAltura(enemigo.x * scaleX);
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            if (dist < mejorDist) {
+                                mejorDist = dist;
+                                potenciaIdeal = p;
+                            }
+                        }
+                    }
+                    mostrarLineaDiosPowerBar(potenciaIdeal);
+                }
             } else {
                 // Fin de turno enemigo, pasa a jugador
                 turnoJugador = 1;
                 gasolina = 100;
                 gasolinaBloqueada = false;
+                // Recalcular indicador dorado en powerbar si modoDios está activo
+                if (modoDios && typeof enemigo !== 'undefined' && enemigo.vida > 0) {
+                    let potenciaIdeal = 50;
+                    let mejorDist = Infinity;
+                    for (let p = 10; p <= 100; p += 1) {
+                        const tray = simularTrayectoria(
+                            jugador.angulo,
+                            p,
+                            typeof viento !== 'undefined' ? viento : 0,
+                            jugador.x * scaleX,
+                            obtenerAltura(jugador.x * scaleX)
+                        );
+                        for (let punto of tray) {
+                            const dx = (punto.x * scaleX) - (enemigo.x * scaleX);
+                            const dy = (canvas.height - punto.y * scaleY) - obtenerAltura(enemigo.x * scaleX);
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            if (dist < mejorDist) {
+                                mejorDist = dist;
+                                potenciaIdeal = p;
+                            }
+                        }
+                    }
+                    mostrarLineaDiosPowerBar(potenciaIdeal);
+                }
             }
             iniciarTimerTurno();
         }
