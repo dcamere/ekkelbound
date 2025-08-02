@@ -1,4 +1,397 @@
+    window.turnosEnemigo = (window.turnosEnemigo || 0) + 1;
+    // Posicionar el cursor en el primer campo al mostrar el modal
+    requestAnimationFrame(() => {
+        inputJugador.focus();
+        inputJugador.select();
+    });
+// --- Modal de nombres ---
+let nombreJugador = "Jugador";
+let juegoIniciado = false;
+let nombreEnemigo = "Enemigo";
+
+function crearModalNombres() {
+    const modal = document.createElement('div');
+    modal.id = 'modalNombres';
+    modal.innerHTML = `
+        <div class="modal-bg"></div>
+        <div class="modal-content">
+            <h2>¡Bienvenido a EkkelBound!</h2>
+            <label>Tu nombre:</label>
+            <input type="text" id="inputNombreJugador" maxlength="16" placeholder="Jugador" autocomplete="off" required />
+            <label>Nombre del enemigo:</label>
+            <input type="text" id="inputNombreEnemigo" maxlength="16" placeholder="Enemigo" autocomplete="off" required />
+            <button id="btnIniciarJuego">Jugar</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    // Estilos
+    const style = document.createElement('style');
+    style.innerHTML = `
+    #modalNombres {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        z-index: 99999; display: flex; align-items: center; justify-content: center;
+        animation: modalFadeIn 1s cubic-bezier(.68,-0.55,.27,1.55);
+    }
+    .modal-bg {
+        position: absolute; width: 100%; height: 100%;
+        background: linear-gradient(120deg, #222 60%, #ffe259 100%);
+        opacity: 0.92; border-radius: 0 0 80px 80px;
+        filter: blur(2px);
+        animation: modalBgIn 1.2s cubic-bezier(.68,-0.55,.27,1.55);
+    }
+    .modal-content {
+        position: relative; z-index: 2; background: rgba(34,34,34,0.98);
+        border-radius: 32px; box-shadow: 0 8px 32px #000a, 0 0 24px #ffe259a0;
+        padding: 48px 36px 32px 36px; min-width: 340px; text-align: center;
+        animation: modalContentIn 1.2s cubic-bezier(.68,-0.55,.27,1.55);
+    }
+    .modal-content h2 {
+        font-size: 2.2em; color: #ffe259; margin-bottom: 24px;
+        text-shadow: 0 0 24px #ffa751, 0 0 6px #000, 2px 2px 16px #000;
+    }
+    .modal-content label {
+        display: block; font-size: 1.1em; color: #fff; margin: 18px 0 6px 0;
+        font-weight: 600; letter-spacing: 1px;
+    }
+    .modal-content input {
+        width: 80%; padding: 10px 16px; font-size: 1.1em; border-radius: 12px;
+        border: none; margin-bottom: 8px; background: #ffe25922; color: #fff;
+        box-shadow: 0 2px 8px #ffe25944; outline: none; transition: box-shadow 0.3s;
+    }
+    .modal-content input::placeholder {
+        color: #222;
+        opacity: 1;
+    }
+    .modal-content input:focus {
+        box-shadow: 0 0 12px #ffe25999;
+    }
+    .modal-content button {
+        margin-top: 24px; padding: 12px 32px; font-size: 1.2em; font-weight: bold;
+        border-radius: 18px; border: none; background: linear-gradient(90deg,#ffe259,#ffa751);
+        color: #222; box-shadow: 0 2px 8px #ffa75199; cursor: pointer;
+        transition: background 0.3s, transform 0.2s;
+    }
+    .modal-content button:hover {
+        background: linear-gradient(90deg,#ffa751,#ffe259); transform: scale(1.08);
+    }
+    @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes modalBgIn { from { opacity: 0; } to { opacity: 0.92; } }
+    @keyframes modalContentIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    `;
+    document.head.appendChild(style);
+    // Inputs y botón
+    const inputJugador = document.getElementById('inputNombreJugador');
+    const inputEnemigo = document.getElementById('inputNombreEnemigo');
+    const btnJugar = document.getElementById('btnIniciarJuego');
+
+    // Tab navega entre campos (comportamiento nativo, pero aseguramos focus)
+    inputJugador.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab') {
+            // Solo navega entre campos, no cambia bala
+            e.preventDefault();
+            inputEnemigo.focus();
+        } else if (e.key === 'Enter') {
+            btnJugar.click();
+        }
+    });
+    inputEnemigo.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            btnJugar.click();
+        }
+    });
+
+    // Evento botón con validación
+    btnJugar.onclick = () => {
+        let valid = true;
+        if (!inputJugador.value.trim()) {
+            inputJugador.style.boxShadow = '0 0 12px #ff5151';
+            valid = false;
+        } else {
+            inputJugador.style.boxShadow = '';
+        }
+        if (!inputEnemigo.value.trim()) {
+            inputEnemigo.style.boxShadow = '0 0 12px #ff5151';
+            valid = false;
+        } else {
+            inputEnemigo.style.boxShadow = '';
+        }
+        if (!valid) return;
+        nombreJugador = inputJugador.value.trim();
+        nombreEnemigo = inputEnemigo.value.trim();
+        modal.style.opacity = '0';
+        setTimeout(() => { modal.remove(); }, 600);
+        juegoIniciado = true;
+        iniciarMusica();
+        dibujarEscena();
+        iniciarTimerTurno();
+    };
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    // --- Control de Tab para modal y cambio de bala ---
+    let tabPressed = false;
+    let tabTimer = null;
+    // --- Modal de estadísticas de partida ---
+    function crearModalStats() {
+        let modal = document.getElementById('modalStats');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'modalStats';
+            document.body.appendChild(modal);
+        }
+        modal.style.position = 'fixed';
+        modal.style.top = '50%';
+        modal.style.left = '50%';
+        modal.style.transform = 'translate(-50%, -50%)';
+        modal.style.width = '60vw';
+        modal.style.height = '60vh';
+        modal.style.background = 'linear-gradient(120deg, #222 60%, #ffe259 100%)';
+        modal.style.borderRadius = '48px';
+        modal.style.boxShadow = '0 8px 32px #000a, 0 0 24px #ffe259a0';
+        modal.style.zIndex = '100000';
+        modal.style.display = 'none';
+        modal.style.padding = '0';
+        modal.style.overflow = 'hidden';
+            // Calcular turnos y daño
+            window.turnosJugador = (window.turnosJugador || 0);
+            window.turnosEnemigo = (window.turnosEnemigo || 0);
+            window.dañoTotalJugador = (window.dañoTotalJugador || 0);
+            window.dañoTotalEnemigo = (window.dañoTotalEnemigo || 0);
+            // Redondear gasolina
+            let gasolinaJugador = Math.round(gasolina);
+            let gasolinaEnemigo = 100;
+            modal.innerHTML = `
+                <div style="display:flex;height:100%;width:100%;">
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(34,34,34,0.92);border-radius:48px 0 0 48px;padding:32px 18px 32px 32px;">
+                        <h2 style='color:#ffe259;font-size:2em;margin-bottom:18px;text-shadow:0 0 24px #ffa751;'>${nombreJugador}</h2>
+                        <div style='font-size:1.2em;color:#fff;margin-bottom:12px;'>HP: <span style='color:#ffe259'>${jugador.vida}</span></div>
+                        <div style='font-size:1.2em;color:#fff;margin-bottom:12px;'>Turnos jugados: <span style='color:#ffe259'>${window.turnosJugador}</span></div>
+                        <div style='font-size:1.2em;color:#fff;margin-bottom:12px;'><span style='background:#ff5151;color:#fff;padding:4px 16px;border-radius:12px;font-weight:bold;'>Muertes: ${window.muertesJugador || 0}</span></div>
+                        <div style='font-size:1.2em;color:#fff;margin-bottom:12px;'><span style='background:#ffe259;color:#222;padding:4px 16px;border-radius:12px;font-weight:bold;'>Kills: ${window.killsJugador || 0}</span></div>
+                    </div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,226,89,0.12);border-radius:0 48px 48px 0;padding:32px 32px 32px 18px;">
+                        <h2 style='color:#222;font-size:2em;margin-bottom:18px;text-shadow:0 0 24px #ffe259;'>${nombreEnemigo}</h2>
+                        <div style='font-size:1.2em;color:#222;margin-bottom:12px;'>HP: <span style='color:#ff5151'>${enemigo.vida}</span></div>
+                        <div style='font-size:1.2em;color:#222;margin-bottom:12px;'>Turnos jugados: <span style='color:#ff5151'>${window.turnosEnemigo}</span></div>
+                        <div style='font-size:1.2em;color:#222;margin-bottom:12px;'><span style='background:#ff5151;color:#fff;padding:4px 16px;border-radius:12px;font-weight:bold;'>Muertes: ${window.muertesEnemigo || 0}</span></div>
+                        <div style='font-size:1.2em;color:#222;margin-bottom:12px;'><span style='background:#ffe259;color:#222;padding:4px 16px;border-radius:12px;font-weight:bold;'>Kills: ${window.killsEnemigo || 0}</span></div>
+                    </div>
+                </div>
+            `;
+    }
+
+    function mostrarModalStats() {
+    // Elimina el modal anterior y crea uno nuevo para forzar actualización
+    let oldModal = document.getElementById('modalStats');
+    if (oldModal) oldModal.remove();
+    crearModalStats();
+    const modal = document.getElementById('modalStats');
+    modal.style.display = 'block';
+    }
+    function ocultarModalStats() {
+        const modal = document.getElementById('modalStats');
+        if (modal) modal.style.display = 'none';
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (!juegoIniciado) return;
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            if (tabPressed) return;
+            tabPressed = true;
+            tabTimer = setTimeout(() => {
+                tabPressed = 'modal';
+                mostrarModalStats();
+            }, 50);
+            return;
+        }
+        // Selección de bala con 1, 2, 3
+        if (e.key === '1') {
+            window.tipoBalaActual = '1';
+            window.actualizarBotones('1');
+        }
+        if (e.key === '2') {
+            window.tipoBalaActual = '2';
+            window.actualizarBotones('2');
+        }
+        if (e.key === '3') {
+            window.tipoBalaActual = 'SS';
+            window.actualizarBotones('SS');
+        }
+    });
+    window.addEventListener('keyup', (e) => {
+        if (!juegoIniciado) return;
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            if (tabPressed) {
+                if (tabTimer) {
+                    clearTimeout(tabTimer);
+                    tabTimer = null;
+                }
+                if (tabPressed === 'modal') {
+                    ocultarModalStats();
+                }
+                tabPressed = false;
+            }
+        }
+    });
+    // --- Tabla de jugadores abajo a la izquierda ---
+    function crearTablaJugadores() {
+        let tabla = document.getElementById('tablaJugadores');
+        if (!tabla) {
+            tabla = document.createElement('div');
+            tabla.id = 'tablaJugadores';
+            document.body.appendChild(tabla);
+        }
+        tabla.style.position = 'fixed';
+        tabla.style.left = '24px';
+        tabla.style.bottom = '24px';
+        tabla.style.zIndex = '9999';
+        tabla.style.background = 'rgba(34,34,34,0.92)';
+        tabla.style.borderRadius = '18px';
+        tabla.style.boxShadow = '0 2px 12px #000a';
+        tabla.style.padding = '8px 12px';
+        tabla.style.minWidth = '110px';
+        tabla.style.fontFamily = 'Arial, sans-serif';
+        tabla.style.color = '#ffe259';
+        tabla.style.fontSize = '0.85em';
+        tabla.style.userSelect = 'none';
+        tabla.style.transition = 'opacity 0.3s';
+    }
+
+    function actualizarTablaJugadores() {
+        crearTablaJugadores();
+        const tabla = document.getElementById('tablaJugadores');
+        // Orden de turno
+        let jugadores = [
+            {
+                nombre: nombreJugador,
+                hp: jugador.vida,
+                tiempo: turnoJugador === 1 ? gasolinaTimer : '',
+                turno: turnoJugador === 1
+            },
+            {
+                nombre: nombreEnemigo,
+                hp: enemigo.vida,
+                tiempo: turnoJugador === 2 ? gasolinaTimer : '',
+                turno: turnoJugador === 2
+            }
+        ];
+        // Ordenar por turno actual primero
+        jugadores.sort((a, b) => b.turno - a.turno);
+        let html = `<table style="width:100%;border-collapse:collapse;">
+            <thead><tr style="font-size:0.95em;text-align:left;"><th>Turno</th><th>Jugador</th><th>HP</th><th>⏳</th></tr></thead><tbody>`;
+        for (let j of jugadores) {
+            html += `<tr style="background:${j.turno ? '#ffe25922' : 'none'};font-weight:${j.turno ? 'bold' : 'normal'};">
+                <td style="padding:2px 4px;">${j.turno ? '▶️' : ''}</td>
+                <td style="padding:2px 4px;">${j.nombre}</td>
+                <td style="padding:2px 4px;">${j.hp}</td>
+                <td style="padding:2px 4px;">${j.tiempo !== '' ? j.tiempo + 's' : ''}</td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        tabla.innerHTML = html;
+    }
+
+    window.actualizarTablaJugadores = actualizarTablaJugadores;
+
+    setInterval(actualizarTablaJugadores, 500);
+    actualizarTablaJugadores();
+    // Actualiza la tabla de jugadores
+    if (window.actualizarTablaJugadores) window.actualizarTablaJugadores();
+    crearModalNombres();
+});
 // ...existing code...
+// --- Música de fondo ---
+let musicaMuteada = false;
+let musica;
+
+function iniciarMusica() {
+    if (!musica) {
+        musica = document.getElementById('bgMusic');
+    }
+    if (musica) {
+        musica.play();
+        mostrarIconoMusica();
+    }
+}
+
+function toggleMusica() {
+    musicaMuteada = !musicaMuteada;
+    if (!musica) {
+        musica = document.getElementById('bgMusic');
+    }
+    if (musica) {
+        musica.muted = musicaMuteada;
+        mostrarIconoMusica();
+    }
+}
+
+function mostrarIconoMusica() {
+    let icono = document.getElementById('iconoMusica');
+    if (!icono) {
+        icono = document.createElement('div');
+        icono.id = 'iconoMusica';
+        icono.style.position = 'fixed';
+        icono.style.top = '16px';
+        icono.style.left = '16px';
+        icono.style.zIndex = '1000';
+        icono.style.fontSize = '44px';
+        icono.style.background = 'rgba(34,34,34,0.85)';
+        icono.style.borderRadius = '50%';
+        icono.style.padding = '10px';
+        icono.style.boxShadow = '0 2px 8px #0006';
+        icono.style.transition = 'opacity 0.3s';
+        document.body.appendChild(icono);
+    }
+    icono.innerHTML = musicaMuteada
+        ? '<span title="Música muteada">🔇</span>'
+        : '<span title="Música activa">🔊</span>';
+    icono.style.opacity = '1';
+
+    // Añadir evento click para mutear/desmutear
+    icono.onclick = function() {
+        toggleMusica();
+    };
+}
+
+// Iniciar música al empezar la partida (cuando el DOM esté listo)
+// Reproducir música en la primera interacción del usuario
+window.addEventListener('DOMContentLoaded', () => {
+    mostrarIconoMusica();
+    let started = false;
+    function startMusicOnce() {
+        if (!started && juegoIniciado) {
+            iniciarMusica();
+            started = true;
+        }
+    }
+    document.addEventListener('keydown', startMusicOnce, { once: true });
+    document.addEventListener('mousedown', startMusicOnce, { once: true });
+    document.addEventListener('touchstart', startMusicOnce, { once: true });
+});
+
+// Tecla M para mutear/desmutear
+document.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'm' && juegoIniciado) {
+        toggleMusica();
+    }
+});
+// Rompe el terreno en la zona de impacto (recorta un círculo)
+function romperTerreno(x, y, radio) {
+    // x, y en coordenadas de canvas
+    for (let i = 0; i < terreno.length; i++) {
+        const tx = i * scaleX;
+        const dist = Math.hypot(tx - x, terreno[i] - y);
+        // Si el punto está dentro del círculo, baja la altura
+        if (dist < radio) {
+            // Baja la altura del terreno en ese punto
+            terreno[i] += radio * 0.7 * (1 - dist / radio);
+            // Limita para no pasar el fondo
+            terreno[i] = Math.min(canvas.height - UI_OFFSET, terreno[i]);
+        }
+    }
+}
 let gasolina = 100;
 let gasolinaInterval = null;
 let gasolinaBloqueada = false;
@@ -8,12 +401,12 @@ let precisionEnemigo = 1.0; // DEBUG: 1 = siempre acierta
 let contadorAciertosEnemigo = 0;
 let contadorTurnosEnemigo = 0;
 let precisionEnemigoAnterior = precisionEnemigo;
-        // Reinicia contadores si precisionEnemigo cambió
-        if (precisionEnemigo !== precisionEnemigoAnterior) {
-            contadorAciertosEnemigo = 0;
-            contadorTurnosEnemigo = 0;
-            precisionEnemigoAnterior = precisionEnemigo;
-        }
+// Reinicia contadores si precisionEnemigo cambió
+if (precisionEnemigo !== precisionEnemigoAnterior) {
+    contadorAciertosEnemigo = 0;
+    contadorTurnosEnemigo = 0;
+    precisionEnemigoAnterior = precisionEnemigo;
+}
 let disparoRealizado = false;
 // Cargar imagen de fondo
 const fondo = new Image();
@@ -141,7 +534,7 @@ let cargaInterval;
 const powerMarker = document.getElementById("powerMarker");
 
 const spriteSheet = new Image();
-spriteSheet.src = 'https://i.pinimg.com/474x/c7/82/cb/c782cbef14da789f2151d05511bf40b2.jpg';
+spriteSheet.src = 'armor_transparent.png';
 
 spriteSheet.onload = () => {
     // Solo dibuja la escena si el fondo ya está cargado
@@ -200,6 +593,16 @@ function simularTrayectoria(anguloDeg, potencia, viento, inicioX, inicioY) {
 function dibujarBarraVida(x, vida) {
     const px = x * scaleX - 30;
     const py = obtenerAltura(x * scaleX) - 80;
+    // Mostrar nombre encima de la barra de vida
+    let nombre = (x === jugador.x) ? nombreJugador : nombreEnemigo;
+    ctx.save();
+    ctx.font = 'bold 20px Arial, sans-serif';
+    ctx.fillStyle = '#ffe259';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#000';
+    ctx.shadowBlur = 8;
+    ctx.fillText(nombre, px + 30, py - 12);
+    ctx.restore();
     ctx.fillStyle = '#000';
     ctx.fillRect(px, py, 60, 8);
     ctx.fillStyle = vida > 30 ? '#0f0' : '#f00';
@@ -235,6 +638,7 @@ function dibujarEscena() {
     }
     dibujarTerreno();
 
+
     const px = jugador.x * scaleX;
     const py = obtenerAltura(px);
 
@@ -244,8 +648,8 @@ function dibujarEscena() {
         if (!jugador.flip) {
             ctx.scale(-1, 1);
         }
-        // Personaje más grande
-        ctx.drawImage(spriteSheet, 0, 0, 60, 60, -45, -90, 90, 90);
+        // Dibuja la imagen completa centrada en el jugador
+        ctx.drawImage(spriteSheet, -45, -90, 90, 90);
         ctx.restore();
         dibujarBarraVida(jugador.x, jugador.vida);
     }
@@ -253,8 +657,8 @@ function dibujarEscena() {
     if (enemigo.vida > 0 && spriteSheet.complete) {
         const ex = enemigo.x * scaleX;
         const ey = obtenerAltura(ex);
-        // Personaje más grande
-        ctx.drawImage(spriteSheet, 65, 0, 60, 60, ex - 45, ey - 90, 90, 90);
+        // Dibuja la imagen completa centrada en el enemigo
+        ctx.drawImage(spriteSheet, ex - 45, ey - 90, 90, 90);
         dibujarBarraVida(enemigo.x, enemigo.vida);
 
         // Indicador de ángulo del enemigo
@@ -324,9 +728,59 @@ function dibujarEscena() {
     ctx.shadowBlur = 0;
 }
 
-function mostrarImpactoCentral() {
+function mostrarImpactoCentral(killed = false) {
+    // Animación de explosión profesional en el canvas
+    function explosionAnim(x, y) {
+        const particles = [];
+        const numParticles = 60;
+        for (let i = 0; i < numParticles; i++) {
+            const angle = Math.random() * 2 * Math.PI;
+            const speed = Math.random() * 6 + 4;
+            particles.push({
+                x,
+                y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: Math.random() * 18 + 12,
+                alpha: 1,
+                color: `rgba(${220 + Math.random() * 35 | 0},${80 + Math.random() * 80 | 0},${10 + Math.random() * 40 | 0},1)`
+            });
+        }
+        let frame = 0;
+        function animate() {
+            frame++;
+            dibujarEscena();
+            for (let p of particles) {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                const grad = ctx.createRadialGradient(p.x, p.y, 2, p.x, p.y, p.radius);
+                grad.addColorStop(0, '#fff');
+                grad.addColorStop(0.2, p.color);
+                grad.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.restore();
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vx *= 0.92;
+                p.vy *= 0.92;
+                p.radius *= 0.96;
+                p.alpha *= 0.93;
+            }
+            if (frame < 32) {
+                requestAnimationFrame(animate);
+            } else {
+                dibujarEscena();
+            }
+        }
+        animate();
+    }
+
+    // Mostrar texto de impacto o killed
     const impacto = document.createElement('div');
-    impacto.textContent = '🔥 ¡IMPACTO! 🔥';
+    impacto.textContent = killed ? '💀 KILLED!' : '🔥 ¡IMPACTO! 🔥';
     impacto.style.position = 'absolute';
     impacto.style.top = '50%';
     impacto.style.left = '50%';
@@ -349,6 +803,19 @@ function mostrarImpactoCentral() {
     setTimeout(() => {
         impacto.remove();
     }, 1500);
+
+    // Calcular posición de impacto en canvas
+    let impactX = null, impactY = null;
+    if (turnoJugador === 1 && enemigo.vida > 0) {
+        impactX = enemigo.x * scaleX;
+        impactY = obtenerAltura(impactX) - 30;
+    } else if (turnoJugador === 2 && jugador.vida > 0) {
+        impactX = jugador.x * scaleX;
+        impactY = obtenerAltura(impactX) - 30;
+    }
+    if (impactX && impactY) {
+        explosionAnim(impactX, impactY);
+    }
 }
 
 function mostrarDaño(valor, x, y) {
@@ -368,24 +835,90 @@ function mostrarDaño(valor, x, y) {
     }, 1000);
 
     // Si alguien muere, respawnea y pasa turno automáticamente
-    if (jugador.vida <= 0) {
+    function animarCaida(obj, callback) {
+        const x = obj.x * scaleX;
+        const yFinal = obtenerAltura(x);
+        let yActual = -120;
+        let frame = 0;
+        function anim() {
+            frame++;
+            let t = Math.min(1, frame / 32);
+            // Ease out
+            t = 1 - Math.pow(1 - t, 2);
+            let y = yActual + (yFinal - yActual) * t;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (fondo.complete && fondo.naturalWidth > 0) {
+                ctx.drawImage(fondo, 0, 0, canvas.width, canvas.height);
+            }
+            dibujarTerreno();
+            // Dibuja el personaje que cae
+            if (spriteSheet.complete) {
+                ctx.save();
+                ctx.translate(x, y);
+                if (obj === jugador && !jugador.flip) ctx.scale(-1, 1);
+                ctx.drawImage(spriteSheet, -45, -90, 90, 90);
+                ctx.restore();
+                dibujarBarraVida(obj.x, obj.vida);
+            }
+            // Dibuja el otro personaje en su ubicación normal
+            let otro, otroFlip;
+            if (obj === jugador) {
+                otro = enemigo;
+                otroFlip = enemigo.flip;
+            } else {
+                otro = jugador;
+                otroFlip = jugador.flip;
+            }
+            // Guardar orientación al inicio de la animación
+            if (anim.frame === undefined) anim.frame = 0;
+            if (anim.frame === 0) anim.otroFlipOriginal = otroFlip;
+            otroFlip = anim.otroFlipOriginal;
+            if (otro.vida > 0 && spriteSheet.complete) {
+                const ox = otro.x * scaleX;
+                const oy = obtenerAltura(ox);
+                ctx.save();
+                ctx.translate(ox, oy);
+                if (otro === jugador && !otroFlip) ctx.scale(-1, 1);
+                ctx.drawImage(spriteSheet, -45, -90, 90, 90);
+                ctx.restore();
+                dibujarBarraVida(otro.x, otro.vida);
+            }
+            if (frame < 32) {
+                requestAnimationFrame(anim);
+            } else {
+                if (callback) callback();
+            }
+        }
+        anim();
+    }
+
+    // Detectar muerte real (vida pasa de >0 a <=0)
+    if (jugador.vida <= 0 && jugador.vida + valor > 0) {
+        window.muertesJugador = (window.muertesJugador || 0) + 1;
+        window.killsEnemigo = (window.killsEnemigo || 0) + 1;
         setTimeout(() => {
             jugador.x = Math.floor(Math.random() * 100) + 10;
             jugador.vida = 100;
-            dibujarEscena();
-            turnoJugador = 2;
-            disparoRealizado = false;
-            enemigoActua();
+            animarCaida(jugador, () => {
+                dibujarEscena();
+                turnoJugador = 2;
+                disparoRealizado = false;
+                enemigoActua();
+            });
         }, 1200);
     }
-    if (enemigo.vida <= 0) {
+    if (enemigo.vida <= 0 && enemigo.vida + valor > 0) {
+        window.muertesEnemigo = (window.muertesEnemigo || 0) + 1;
+        window.killsJugador = (window.killsJugador || 0) + 1;
         setTimeout(() => {
             enemigo.x = Math.floor(Math.random() * 100) + 120;
             enemigo.vida = 100;
-            dibujarEscena();
-            turnoJugador = 1;
-            disparoRealizado = false;
-            iniciarTimerTurno();
+            animarCaida(enemigo, () => {
+                dibujarEscena();
+                turnoJugador = 1;
+                disparoRealizado = false;
+                iniciarTimerTurno();
+            });
         }, 1200);
     }
 }
@@ -444,6 +977,25 @@ function dispararPotencia(potencia) {
         // Colisión con el terreno
         const terrenoY = obtenerAltura(px);
         if (py > terrenoY) {
+            // Rompe el terreno en el punto de impacto
+            romperTerreno(px, py, tipo === 'SS' ? 300 : tipo === '2' ? 120 : 100);
+
+            // Daño reducido si el impacto está cerca del enemigo
+            const ex = enemigo.x * scaleX;
+            const ey = obtenerAltura(ex);
+            const dist = Math.hypot(px - ex, py - ey);
+            const radioCercano = tipo === 'SS' ? 120 : tipo === '2' ? 60 : 40;
+            if (enemigo.vida > 0 && dist < radioCercano) {
+                let daño = tipo === 'SS' ? 30 : tipo === '2' ? 18 : 12;
+                enemigo.vida = Math.max(0, enemigo.vida - daño);
+                mostrarDaño(daño, ex, ey);
+                if (enemigo.vida <= 0) {
+                    setTimeout(() => {
+                        actualizarEnemigo();
+                    }, 1000);
+                }
+            }
+
             disparando = false;
             dibujarEscena();
             setTimeout(() => {
@@ -481,11 +1033,12 @@ function dispararPotencia(potencia) {
         };
 
         if (enemigo.vida > 0 && px >= bbox.x && px <= bbox.x + bbox.w && py >= bbox.y && py <= bbox.y + bbox.h) {
-            mostrarImpactoCentral();
             let daño = 20;
             if (tipo === '2') daño = 35;
             if (tipo === 'SS') daño = 60;
-            enemigo.vida = Math.max(0, enemigo.vida - daño);
+            const vidaRestante = enemigo.vida - daño;
+            mostrarImpactoCentral(vidaRestante <= 0);
+            enemigo.vida = Math.max(0, vidaRestante);
             mostrarDaño(daño, ex, ey);
             if (enemigo.vida <= 0) {
                 setTimeout(() => {
@@ -534,6 +1087,7 @@ const teclasPresionadas = {};
 let movimientoInterval = null;
 
 function procesarTeclas() {
+    if (!juegoIniciado) return;
     if (disparoRealizado) return;
     if (disparando || cargando) return;
     if (turnoJugador !== 1) return;
@@ -617,7 +1171,7 @@ document.addEventListener("click", (e) => {
 window.tipos = ['1', '2', 'SS'];
 window.tipoBalaActual = '1';
 
-window.actualizarBotones = function (tipoSeleccionado) {
+window.actualizarBotones = function(tipoSeleccionado) {
     document.querySelectorAll('.bullet-button').forEach(btn => {
         btn.classList.toggle('selected', btn.dataset.tipo === tipoSeleccionado);
     });
@@ -630,25 +1184,21 @@ document.querySelectorAll('.bullet-button').forEach(btn => {
     });
 });
 
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Tab') {
-        e.preventDefault();
-        let currentIndex = window.tipos.indexOf(window.tipoBalaActual);
-        window.tipoBalaActual = window.tipos[(currentIndex + 1) % window.tipos.length];
-        window.actualizarBotones(window.tipoBalaActual);
-    }
-});
 
 actualizarUI();
 dibujarEscena();
 
 // --- Timer de turnos ---
 function iniciarTimerTurno() {
+    if (!juegoIniciado) return;
     if (gasolinaInterval) clearInterval(gasolinaInterval);
     gasolinaTimer = 20;
     if (turnoJugador === 1) {
         gasolina = 100;
         gasolinaBloqueada = false;
+        window.turnosJugador = (window.turnosJugador || 0) + 1;
+    } else {
+        window.turnosEnemigo = (window.turnosEnemigo || 0) + 1;
     }
     actualizarUI();
     gasolinaInterval = setInterval(() => {
@@ -867,6 +1417,8 @@ function dispararEnemigo(angulo, potencia) {
         // Colisión con el terreno
         const terrenoY = obtenerAltura(px2);
         if (py2 > terrenoY) {
+            // Rompe el terreno en el punto de impacto
+            romperTerreno(px2, py2, 36);
             dibujarEscena();
             turnoJugador = 1;
             iniciarTimerTurno();
@@ -883,8 +1435,9 @@ function dispararEnemigo(angulo, potencia) {
         const jy = obtenerAltura(jx);
         const bbox = { x: jx - 30, y: jy - 60, w: 60, h: 60 };
         if (px2 >= bbox.x && px2 <= bbox.x + bbox.w && py2 >= bbox.y && py2 <= bbox.y + bbox.h) {
-            mostrarImpactoCentral();
-            jugador.vida = Math.max(0, jugador.vida - 30);
+            const vidaRestante = jugador.vida - 30;
+            mostrarImpactoCentral(vidaRestante <= 0);
+            jugador.vida = Math.max(0, vidaRestante);
             mostrarDaño(30, jx, jy);
             dibujarEscena();
             turnoJugador = 1;
