@@ -699,33 +699,56 @@ function dibujarEscena() {
     const ty = py - Math.sin(rad) * 100;
 
     // Indicador de ángulo estilizado
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(px, py - 45); // Ajuste para el nuevo tamaño
-    ctx.lineTo(tx, ty);
-    ctx.strokeStyle = '#00e6ff'; // Color cian brillante
-    ctx.lineWidth = 5;
-    ctx.shadowColor = '#00e6ff';
-    ctx.shadowBlur = 12;
-    ctx.stroke();
-    ctx.restore();
+        // Indicador de ángulo curvado siguiendo la trayectoria de la bala
+        // Usar la potencia que se está cargando, o el valor por defecto si no
+        let potenciaIndicador = 50;
+        if (typeof cargando !== 'undefined' && cargando) {
+            potenciaIndicador = typeof cargaPotencia !== 'undefined' ? cargaPotencia : 50;
+        }
+        const trayectoria = simularTrayectoria(
+            jugador.angulo,
+            potenciaIndicador,
+            typeof viento !== 'undefined' ? viento : 0,
+            jugador.x * scaleX,
+            obtenerAltura(jugador.x * scaleX)
+        );
+        if (trayectoria.length > 1) {
+        // Indicador aún más corto: solo los primeros 4 puntos
+        const maxPuntos = 4;
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(px, py - 45);
+            for (let i = 0; i < Math.min(trayectoria.length, maxPuntos); i++) {
+                const punto = trayectoria[i];
+                ctx.lineTo(punto.x * scaleX, canvas.height - punto.y * scaleY);
+            }
+            ctx.strokeStyle = '#00e6ff';
+            ctx.lineWidth = 5;
+            ctx.shadowColor = '#00e6ff';
+            ctx.shadowBlur = 12;
+            ctx.stroke();
+            ctx.restore();
 
-    // Indicador de ángulo con círculo en la punta
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(tx, ty, 10, 0, 2 * Math.PI);
-    ctx.fillStyle = '#00e6ff';
-    ctx.shadowColor = '#00e6ff';
-    ctx.shadowBlur = 16;
-    ctx.fill();
-    ctx.restore();
+            // Círculo en la punta de la trayectoria
+            const ultimo = trayectoria[Math.min(trayectoria.length - 1, maxPuntos - 1)];
+            const cx = ultimo.x * scaleX;
+            const cy = canvas.height - ultimo.y * scaleY;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, 10, 0, 2 * Math.PI);
+            ctx.fillStyle = '#00e6ff';
+            ctx.shadowColor = '#00e6ff';
+            ctx.shadowBlur = 16;
+            ctx.fill();
+            ctx.restore();
 
-    ctx.font = 'bold 18px sans-serif';
-    ctx.fillStyle = '#00e6ff';
-    ctx.shadowColor = '#000';
-    ctx.shadowBlur = 8;
-    ctx.fillText(`${jugador.angulo}°`, tx + 15, ty - 10);
-    ctx.shadowBlur = 0;
+            ctx.font = 'bold 18px sans-serif';
+            ctx.fillStyle = '#00e6ff';
+            ctx.shadowColor = '#000';
+            ctx.shadowBlur = 8;
+            ctx.fillText(`${jugador.angulo}°`, cx + 15, cy - 10);
+            ctx.shadowBlur = 0;
+        }
 }
 
 function mostrarImpactoCentral(killed = false) {
