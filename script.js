@@ -849,24 +849,45 @@ function simularTrayectoria(anguloDeg, potencia, viento, inicioX, inicioY) {
 }
 
 function dibujarBarraVida(x, vida) {
-    const px = x * scaleX - 30;
-    const py = obtenerAltura(x * scaleX) - 80;
-    // Mostrar nombre encima de la barra de vida
+    // Posición base del personaje
+    const px = x * scaleX;
+    const py = obtenerAltura(x * scaleX);
+    // Ajustes proporcionales al ancho del terreno
+    const spriteScale = Math.max(0.7, Math.min(1.2, canvas.width / 2400));
+    const nombreY = py - 80 * spriteScale; // Arriba del sprite
+    const barY = py + 10 * spriteScale;    // Más cerca, justo debajo del sprite
     let nombre = (x === jugador.x) ? nombreJugador : nombreEnemigo;
     ctx.save();
-    ctx.font = 'bold 20px Arial, sans-serif';
+    ctx.font = `bold ${28 * spriteScale}px "Segoe UI", Arial, sans-serif`;
     ctx.fillStyle = '#ffe259';
     ctx.textAlign = 'center';
     ctx.shadowColor = '#000';
-    ctx.shadowBlur = 8;
-    ctx.fillText(nombre, px + 30, py - 12);
+    ctx.shadowBlur = 10 * spriteScale;
+    ctx.fillText(nombre, px, nombreY);
     ctx.restore();
-    ctx.fillStyle = '#000';
-    ctx.fillRect(px, py, 60, 8);
-    ctx.fillStyle = vida > 30 ? '#0f0' : '#f00';
-    ctx.fillRect(px, py, 60 * (vida / 100), 8);
+    // Barra de vida proporcional
+    const barWidth = 70 * spriteScale;
+    const barHeight = 12 * spriteScale;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(px - barWidth / 2, barY, barWidth, barHeight);
+    let grad = ctx.createLinearGradient(px - barWidth / 2, barY, px + barWidth / 2, barY);
+    grad.addColorStop(0, vida > 30 ? '#00e676' : '#ff5151');
+    grad.addColorStop(1, vida > 30 ? '#ffe259' : '#ff5151');
+    ctx.fillStyle = grad;
+    ctx.fillRect(px - barWidth / 2, barY, barWidth * (vida / 100), barHeight);
+    ctx.lineWidth = 2 * spriteScale;
     ctx.strokeStyle = '#fff';
-    ctx.strokeRect(px, py, 60, 8);
+    ctx.shadowColor = '#ffe259';
+    ctx.shadowBlur = 6 * spriteScale;
+    ctx.strokeRect(px - barWidth / 2, barY, barWidth, barHeight);
+    ctx.font = `bold ${14 * spriteScale}px "Segoe UI", Arial, sans-serif`;
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#000';
+    ctx.shadowBlur = 4 * spriteScale;
+    ctx.fillText(`${vida} HP`, px, barY + barHeight - 2 * spriteScale);
+    ctx.restore();
 }
 
 function dibujarTerreno() {
@@ -901,13 +922,14 @@ function dibujarEscena() {
     const py = obtenerAltura(px);
 
     if (spriteSheet.complete) {
+        // Escalado proporcional
+        const spriteScale = Math.max(0.7, Math.min(1.2, canvas.width / 2400));
         ctx.save();
         ctx.translate(px, py);
         if (!jugador.flip) {
             ctx.scale(-1, 1);
         }
-        // Dibuja la imagen completa centrada en el jugador
-        ctx.drawImage(spriteSheet, -45, -90, 90, 90);
+        ctx.drawImage(spriteSheet, -45 * spriteScale, -90 * spriteScale, 90 * spriteScale, 90 * spriteScale);
         ctx.restore();
         dibujarBarraVida(jugador.x, jugador.vida);
     }
@@ -915,168 +937,179 @@ function dibujarEscena() {
     if (enemigo.vida > 0 && spriteSheet.complete) {
         const ex = enemigo.x * scaleX;
         const ey = obtenerAltura(ex);
+        const spriteScale = Math.max(0.7, Math.min(1.2, canvas.width / 2400));
         ctx.save();
         ctx.translate(ex, ey);
-        // El enemigo debe mirar hacia el jugador: flip si el jugador está a la derecha
         if (jugador.x > enemigo.x) {
             ctx.scale(-1, 1);
         }
-        ctx.drawImage(spriteSheet, -45, -90, 90, 90);
+        ctx.drawImage(spriteSheet, -45 * spriteScale, -90 * spriteScale, 90 * spriteScale, 90 * spriteScale);
         ctx.restore();
         dibujarBarraVida(enemigo.x, enemigo.vida);
 
         // Indicador de ángulo del enemigo
         const dirE = enemigo.x < jugador.x ? 1 : -1;
         const radE = enemigo.angulo * Math.PI / 180;
-        const txE = ex + dirE * Math.cos(radE) * 100;
-        const tyE = ey - Math.sin(radE) * 100;
+        const txE = ex + dirE * Math.cos(radE) * 80 * spriteScale;
+        const tyE = ey - Math.sin(radE) * 80 * spriteScale;
         ctx.save();
         ctx.beginPath();
-        ctx.moveTo(ex, ey - 45);
+        ctx.moveTo(ex, ey - 45 * spriteScale);
         ctx.lineTo(txE, tyE);
         ctx.strokeStyle = '#ff5151';
-        ctx.lineWidth = 5;
+        ctx.lineWidth = 4 * spriteScale;
         ctx.shadowColor = '#ff5151';
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 10 * spriteScale;
         ctx.stroke();
         ctx.restore();
         // Círculo en la punta
         ctx.save();
         ctx.beginPath();
-        ctx.arc(txE, tyE, 10, 0, 2 * Math.PI);
+        ctx.arc(txE, tyE, 8 * spriteScale, 0, 2 * Math.PI);
         ctx.fillStyle = '#ff5151';
         ctx.shadowColor = '#ff5151';
-        ctx.shadowBlur = 16;
+        ctx.shadowBlur = 12 * spriteScale;
         ctx.fill();
         ctx.restore();
-        ctx.font = 'bold 18px sans-serif';
+        ctx.font = `bold ${14 * spriteScale}px sans-serif`;
         ctx.fillStyle = '#ff5151';
         ctx.shadowColor = '#000';
-        ctx.shadowBlur = 8;
-        ctx.fillText(`${Math.round(enemigo.angulo)}°`, txE + 15, tyE - 10);
+        ctx.shadowBlur = 6 * spriteScale;
+        ctx.fillText(`${Math.round(enemigo.angulo)}°`, txE + 12 * spriteScale, tyE - 8 * spriteScale);
         ctx.shadowBlur = 0;
     }
 
+    const spriteScale = Math.max(0.7, Math.min(1.2, canvas.width / 2400));
     const dir = jugador.flip ? -1 : 1;
     const rad = jugador.angulo * Math.PI / 180;
-    const tx = px + dir * Math.cos(rad) * 100; // Mucho más largo para el cañón
-    const ty = py - Math.sin(rad) * 100;
+    const tx = px + dir * Math.cos(rad) * 80 * spriteScale;
+    const ty = py - Math.sin(rad) * 80 * spriteScale;
 
     // Indicador de ángulo estilizado
-        // Indicador de ángulo curvado siguiendo la trayectoria de la bala
-        // Usar la potencia que se está cargando, o el valor por defecto si no
-        let potenciaIndicador = 50;
-        if (typeof cargando !== 'undefined' && cargando) {
-            potenciaIndicador = typeof cargaPotencia !== 'undefined' ? cargaPotencia : 50;
-        }
-        const trayectoria = simularTrayectoria(
-            jugador.angulo,
-            potenciaIndicador,
-            typeof viento !== 'undefined' ? viento : 0,
-            jugador.x * scaleX,
-            obtenerAltura(jugador.x * scaleX)
-        );
-        if (trayectoria.length > 1) {
-            let puntosMostrar = 4;
-            let trayectoriaFinal = trayectoria;
-            let cx, cy;
-            if (modoDios && typeof enemigo !== 'undefined' && enemigo.vida > 0) {
-                // Calcular potencia ideal para acertar al enemigo
-                let potenciaIdeal = 50;
-                let mejorDist = Infinity;
-                for (let p = 10; p <= 100; p += 1) {
-                    const tray = simularTrayectoria(
-                        jugador.angulo,
-                        p,
-                        typeof viento !== 'undefined' ? viento : 0,
-                        jugador.x * scaleX,
-                        obtenerAltura(jugador.x * scaleX)
-                    );
-                    for (let punto of tray) {
-                        const dx = (punto.x * scaleX) - (enemigo.x * scaleX);
-                        const dy = (canvas.height - punto.y * scaleY) - obtenerAltura(enemigo.x * scaleX);
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist < mejorDist) {
-                            mejorDist = dist;
-                            potenciaIdeal = p;
-                        }
-                    }
-                }
-                trayectoriaFinal = simularTrayectoria(
+    let potenciaIndicador = 50;
+    if (typeof cargando !== 'undefined' && cargando) {
+        potenciaIndicador = typeof cargaPotencia !== 'undefined' ? cargaPotencia : 50;
+    }
+    const trayectoria = simularTrayectoria(
+        jugador.angulo,
+        potenciaIndicador,
+        typeof viento !== 'undefined' ? viento : 0,
+        jugador.x * scaleX,
+        obtenerAltura(jugador.x * scaleX)
+    );
+    if (trayectoria.length > 1) {
+        let puntosMostrar = 4;
+        let trayectoriaFinal = trayectoria;
+        let cx, cy;
+        if (modoDios && typeof enemigo !== 'undefined' && enemigo.vida > 0) {
+            let potenciaIdeal = 50;
+            let mejorDist = Infinity;
+            for (let p = 10; p <= 100; p += 1) {
+                const tray = simularTrayectoria(
                     jugador.angulo,
-                    potenciaIdeal,
+                    p,
                     typeof viento !== 'undefined' ? viento : 0,
                     jugador.x * scaleX,
                     obtenerAltura(jugador.x * scaleX)
                 );
-                puntosMostrar = trayectoriaFinal.length;
-            }
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(px, py - 45);
-            let finEncontrado = false;
-            let finX = null, finY = null;
-            for (let i = 0; i < Math.min(trayectoriaFinal.length, puntosMostrar); i++) {
-                const punto = trayectoriaFinal[i];
-                const x = punto.x * scaleX;
-                const y = canvas.height - punto.y * scaleY;
-                // Si estamos en modo dios, buscamos el primer punto donde la trayectoria "toca" el terreno cerca del enemigo
-                if (modoDios && !finEncontrado) {
-                    const terrenoY = obtenerAltura(x);
-                    const enemigoX = enemigo.x * scaleX;
-                    // Si está cerca del enemigo y toca el terreno
-                    if (Math.abs(x - enemigoX) < 15 && y >= terrenoY) {
-                        finEncontrado = true;
-                        finX = x;
-                        finY = terrenoY;
-                        ctx.lineTo(x, terrenoY);
-                        break; // Detener el dibujo aquí
+                for (let punto of tray) {
+                    const dx = (punto.x * scaleX) - (enemigo.x * scaleX);
+                    const dy = (canvas.height - punto.y * scaleY) - obtenerAltura(enemigo.x * scaleX);
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < mejorDist) {
+                        mejorDist = dist;
+                        potenciaIdeal = p;
                     }
                 }
-                ctx.lineTo(x, y);
             }
-            ctx.strokeStyle = modoDios ? '#ffe259' : '#00e6ff';
-            ctx.lineWidth = 5;
-            ctx.shadowColor = modoDios ? '#ffe259' : '#00e6ff';
-            ctx.shadowBlur = 12;
-            ctx.stroke();
-            ctx.restore();
+            trayectoriaFinal = simularTrayectoria(
+                jugador.angulo,
+                potenciaIdeal,
+                typeof viento !== 'undefined' ? viento : 0,
+                jugador.x * scaleX,
+                obtenerAltura(jugador.x * scaleX)
+            );
+            puntosMostrar = trayectoriaFinal.length;
+        }
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(px, py - 45 * spriteScale);
+        let finEncontrado = false;
+        let finX = null, finY = null;
+        for (let i = 0; i < Math.min(trayectoriaFinal.length, puntosMostrar); i++) {
+            const punto = trayectoriaFinal[i];
+            const x = punto.x * scaleX;
+            const y = canvas.height - punto.y * scaleY;
+            if (modoDios && !finEncontrado) {
+                const terrenoY = obtenerAltura(x);
+                const enemigoX = enemigo.x * scaleX;
+                if (Math.abs(x - enemigoX) < 15 * spriteScale && y >= terrenoY) {
+                    finEncontrado = true;
+                    finX = x;
+                    finY = terrenoY;
+                    ctx.lineTo(x, terrenoY);
+                    break;
+                }
+            }
+            ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = modoDios ? '#ffe259' : '#00e6ff';
+        ctx.lineWidth = 4 * spriteScale;
+        ctx.shadowColor = modoDios ? '#ffe259' : '#00e6ff';
+        ctx.shadowBlur = 10 * spriteScale;
+        ctx.stroke();
+        ctx.restore();
 
-            // Círculo e indicador de ángulo al inicio de la trayectoria (modo dios)
-            const primero = trayectoriaFinal[0];
-            cx = primero.x * scaleX;
-            cy = canvas.height - primero.y * scaleY;
+        // Círculo e indicador de ángulo al inicio de la trayectoria
+        const primero = trayectoriaFinal[0];
+        cx = primero.x * scaleX;
+        cy = canvas.height - primero.y * scaleY;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, 8 * spriteScale, 0, 2 * Math.PI);
+        ctx.fillStyle = modoDios ? '#ffe259' : '#00e6ff';
+        ctx.shadowColor = modoDios ? '#ffe259' : '#00e6ff';
+        ctx.shadowBlur = 12 * spriteScale;
+        ctx.fill();
+        ctx.restore();
+
+        // Círculo dorado en el punto final sobre el terreno cerca del enemigo
+        if (modoDios && finEncontrado) {
             ctx.save();
             ctx.beginPath();
-            ctx.arc(cx, cy, 10, 0, 2 * Math.PI);
-            ctx.fillStyle = modoDios ? '#ffe259' : '#00e6ff';
-            ctx.shadowColor = modoDios ? '#ffe259' : '#00e6ff';
-            ctx.shadowBlur = 16;
+            ctx.arc(finX, finY, 8 * spriteScale, 0, 2 * Math.PI);
+            ctx.fillStyle = '#ffe259';
+            ctx.shadowColor = '#ffe259';
+            ctx.shadowBlur = 12 * spriteScale;
             ctx.fill();
             ctx.restore();
-
-            // Círculo dorado en el punto final sobre el terreno cerca del enemigo
-            if (modoDios && finEncontrado) {
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(finX, finY, 10, 0, 2 * Math.PI);
-                ctx.fillStyle = '#ffe259';
-                ctx.shadowColor = '#ffe259';
-                ctx.shadowBlur = 16;
-                ctx.fill();
-                ctx.restore();
-            }
-
-            ctx.font = 'bold 18px sans-serif';
-            ctx.fillStyle = modoDios ? '#ffe259' : '#00e6ff';
-            ctx.shadowColor = '#000';
-            ctx.shadowBlur = 8;
-            ctx.fillText(`${jugador.angulo}°`, cx + 15, cy - 10);
-            ctx.shadowBlur = 0;
         }
+
+        ctx.font = `bold ${14 * spriteScale}px sans-serif`;
+        ctx.fillStyle = modoDios ? '#ffe259' : '#00e6ff';
+        ctx.shadowColor = '#000';
+        ctx.shadowBlur = 6 * spriteScale;
+        ctx.fillText(`${jugador.angulo}°`, cx + 12 * spriteScale, cy - 8 * spriteScale);
+        ctx.shadowBlur = 0;
+    }
 }
 
 function mostrarImpactoCentral(killed = false) {
+    // Reproducir sonido de explosión
+    function reproducirExplosion() {
+        let audio = document.getElementById('explosionAudio');
+        if (!audio) {
+            audio = document.createElement('audio');
+            audio.id = 'explosionAudio';
+            audio.src = 'explosion.mp3';
+            audio.preload = 'auto';
+            document.body.appendChild(audio);
+        }
+        audio.currentTime = 0;
+        audio.play();
+    }
+
+    reproducirExplosion();
     // Animación de explosión profesional en el canvas
     function explosionAnim(x, y) {
         const particles = [];
@@ -1328,6 +1361,17 @@ function dispararPotencia(potencia) {
         // Colisión con el terreno
         const terrenoY = obtenerAltura(px);
         if (py > terrenoY) {
+            // Reproducir sonido de explosión
+            let audio = document.getElementById('explosionAudio');
+            if (!audio) {
+                audio = document.createElement('audio');
+                audio.id = 'explosionAudio';
+                audio.src = 'explosion.mp3';
+                audio.preload = 'auto';
+                document.body.appendChild(audio);
+            }
+            audio.currentTime = 0;
+            audio.play();
             // Rompe el terreno en el punto de impacto
             romperTerreno(px, py, tipo === 'SS' ? 300 : tipo === '2' ? 120 : 100);
 
@@ -1436,6 +1480,45 @@ function actualizarUI() {
         let timerText = `<span style='font-size:0.5em;vertical-align:top;'>⏳</span> <span style='font-size:1.2em; font-family:Impact,Arial,sans-serif; color:${color}; text-shadow:0 0 24px ${color}, 0 0 8px #000;'>${gasolinaTimer}</span><span style='font-size:0.7em;'>s</span><br><span style='font-size:0.5em;color:${color};'>${nombre}</span>`;
         gasolinaTimerDiv.innerHTML = timerText;
     }
+}
+
+// Añadir texto opaco en el centro de la barra de power
+const powerBarContainer = document.getElementById('powerBarContainer');
+if (powerBarContainer && !document.getElementById('powerBarLabel')) {
+    const label = document.createElement('div');
+    label.id = 'powerBarLabel';
+    label.textContent = 'POWER BAR';
+    label.style.position = 'absolute';
+    label.style.top = '50%';
+    label.style.left = '50%';
+    label.style.transform = 'translate(-50%, -50%)';
+    label.style.color = '#fff';
+    label.style.opacity = '0.18';
+    label.style.fontSize = '1.3em';
+    label.style.fontWeight = 'bold';
+    label.style.pointerEvents = 'none';
+    label.style.letterSpacing = '2px';
+    label.style.userSelect = 'none';
+    powerBarContainer.appendChild(label);
+}
+// Añadir texto menos opaco y emoji en el centro de la barra de gasolina
+const gasolinaBarContainer = document.getElementById('gasolinaBarContainer');
+if (gasolinaBarContainer && !document.getElementById('gasolinaBarLabel')) {
+    const label = document.createElement('div');
+    label.id = 'gasolinaBarLabel';
+    label.innerHTML = '⛽ GASOLINE';
+    label.style.position = 'absolute';
+    label.style.top = '50%';
+    label.style.left = '50%';
+    label.style.transform = 'translate(-50%, -50%)';
+    label.style.color = '#222';
+    label.style.opacity = '0.32';
+    label.style.fontSize = '1.1em';
+    label.style.fontWeight = 'bold';
+    label.style.pointerEvents = 'none';
+    label.style.letterSpacing = '2px';
+    label.style.userSelect = 'none';
+    gasolinaBarContainer.appendChild(label);
 }
 
 const teclasPresionadas = {};
@@ -1589,6 +1672,8 @@ document.addEventListener("click", (e) => {
     }
 });
 
+
+
 window.tipos = ['1', '2', 'SS'];
 window.tipoBalaActual = '1';
 
@@ -1612,19 +1697,50 @@ dibujarEscena();
 // --- Timer de turnos ---
 function iniciarTimerTurno() {
     if (!juegoIniciado) return;
-    if (gasolinaInterval) clearInterval(gasolinaInterval);
+    if (gasolinaInterval) {
+        clearInterval(gasolinaInterval);
+        gasolinaInterval = null;
+    }
+    // Reiniciar timer de turno SIEMPRE al iniciar el turno
     gasolinaTimer = 20;
+    // Control de audio clock-tick
+    let clockAudio = document.getElementById('clockTickAudio');
+    if (!clockAudio) {
+        clockAudio = document.createElement('audio');
+        clockAudio.id = 'clockTickAudio';
+        clockAudio.src = 'clock-tick.mp3';
+        clockAudio.preload = 'auto';
+        clockAudio.loop = true;
+        document.body.appendChild(clockAudio);
+    }
     if (turnoJugador === 1) {
         gasolina = 100;
         gasolinaBloqueada = false;
         window.turnosJugador = (window.turnosJugador || 0) + 1;
+        // Reproducir clock-tick en loop
+        clockAudio.currentTime = 0;
+        clockAudio.play();
     } else {
         window.turnosEnemigo = (window.turnosEnemigo || 0) + 1;
+        // Pausar clock-tick
+        clockAudio.pause();
+        clockAudio.currentTime = 0;
     }
     actualizarUI();
     gasolinaInterval = setInterval(() => {
         gasolinaTimer--;
         actualizarUI();
+        // Control estricto del audio en cada tick
+        let clockAudio = document.getElementById('clockTickAudio');
+        if (clockAudio) {
+            if (turnoJugador === 1 && clockAudio.paused) {
+                clockAudio.currentTime = 0;
+                clockAudio.play();
+            } else if (turnoJugador !== 1 && !clockAudio.paused) {
+                clockAudio.pause();
+                clockAudio.currentTime = 0;
+            }
+        }
         if (gasolinaTimer <= 0) {
             clearInterval(gasolinaInterval);
             gasolinaInterval = null;
@@ -1633,7 +1749,10 @@ function iniciarTimerTurno() {
                 turnoJugador = 2;
                 gasolina = 100;
                 setTimeout(() => {
-                    enemigoActua();
+                    iniciarTimerTurno();
+                    setTimeout(() => {
+                        enemigoActua();
+                    }, 100);
                 }, 800);
                 // Recalcular indicador dorado en powerbar si modoDios está activo
                 if (modoDios && typeof enemigo !== 'undefined' && enemigo.vida > 0) {
@@ -1664,6 +1783,7 @@ function iniciarTimerTurno() {
                 turnoJugador = 1;
                 gasolina = 100;
                 gasolinaBloqueada = false;
+                iniciarTimerTurno();
                 // Recalcular indicador dorado en powerbar si modoDios está activo
                 if (modoDios && typeof enemigo !== 'undefined' && enemigo.vida > 0) {
                     let potenciaIdeal = 50;
@@ -1689,7 +1809,6 @@ function iniciarTimerTurno() {
                     mostrarLineaDiosPowerBar(potenciaIdeal);
                 }
             }
-            iniciarTimerTurno();
         }
     }, 1000);
 }
@@ -1888,6 +2007,17 @@ function dispararEnemigo(angulo, potencia) {
         // Colisión con el terreno
         const terrenoY = obtenerAltura(px2);
         if (py2 > terrenoY) {
+            // Reproducir sonido de explosión
+            let audio = document.getElementById('explosionAudio');
+            if (!audio) {
+                audio = document.createElement('audio');
+                audio.id = 'explosionAudio';
+                audio.src = 'explosion.mp3';
+                audio.preload = 'auto';
+                document.body.appendChild(audio);
+            }
+            audio.currentTime = 0;
+            audio.play();
             // Rompe el terreno en el punto de impacto
             romperTerreno(px2, py2, 36);
             dibujarEscena();
