@@ -7,7 +7,7 @@ const server = http.createServer(app);
 const io = socketIo(server);
 
 const path = require('path');
-app.use(express.static(path.join(__dirname, '../public'))); // Carpeta donde estará tu juego frontend
+app.use(express.static(path.join(__dirname, './'))); // Sirve archivos estáticos desde la raíz
 
 let rooms = {};
 
